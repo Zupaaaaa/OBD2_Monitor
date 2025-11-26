@@ -307,9 +307,14 @@ void spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
             spp_connected = true;
             break;
         }
+        // Wyslanie danych SPP
+        case ESP_SPP_WRITE_EVT: {
+            ESP_LOGI("SPP", "Pomyslnie wysłano %d bajtów", param->write.len);
+            break;
+        }
         // Otrzymanie danych SPP
         case ESP_SPP_DATA_IND_EVT: {
-            ESP_LOGI("SPP", "Odebrano %d bajtów:", param->data_ind.len);
+            ESP_LOGI("SPP", "Odebrano %d bajtów: ", param->data_ind.len);
             printf("%.*s\n", param->data_ind.len, param->data_ind.data);
             break;
         }
@@ -372,26 +377,12 @@ void bluetooth_init(void)
     ESP_ERROR_CHECK(esp_spp_init(ESP_SPP_MODE_CB));
 }
 
-bool bluetooth_connect(uint8_t device_number)
+bool bluetooth_connect(esp_bd_addr_t bda)
 {
-        // Ustalenie liczby znalezionych urzadzen
-        uint8_t dev_counter;
-        for(dev_counter = 0; dev_counter <= MAX_DEVICES; dev_counter++) {
-            if(dev_info[dev_counter].dev_counter == 0) {
-                break;
-            }
-        }
-    
-        // Sprawdzenie poprawnosci numeru urzadzenia
-        if(device_number == 0 || device_number > dev_counter) {
-            ESP_LOGE("BT", "Nieprawidlowy numer urzadzenia!");
-            return false;
-        }
-
         const char *pin[] = {"1234", "0000"};
         for (int i = 0; i < 2; i++) {
             esp_bt_gap_set_pin(ESP_BT_PIN_TYPE_FIXED, 4, (uint8_t*)pin[i]);
-            esp_spp_connect(ESP_SPP_SEC_NONE, ESP_SPP_ROLE_MASTER, 0, dev_info[device_number - 1].bda);
+            esp_spp_connect(ESP_SPP_SEC_NONE, ESP_SPP_ROLE_MASTER, 0, bda);
 
             int counter = 0;
             while (!spp_connected && (counter < MAX_CONN_TIME_MS / CHECK_CONN_DELAY_MS)) {
@@ -400,11 +391,11 @@ bool bluetooth_connect(uint8_t device_number)
             }
 
             if(spp_connected) {
-                ESP_LOGI("SPP", "Polaczono z uzyciem pinu: %s", pin[i]);
+                ESP_LOGI("BT", "Polaczono z uzyciem pinu: %s", pin[i]);
                 return true;
             }
         }
-        ESP_LOGI("SPP", "Zaden pin nie jest poprawny, polaczenie nie powiodlo sie");
+        ESP_LOGI("BT", "Zaden pin nie jest poprawny, polaczenie nie powiodlo sie");
         return false;
 }
 
