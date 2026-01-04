@@ -29,6 +29,11 @@
 
 #define PINS_COUNT 2
 
+#define BUF_SIZE 128
+
+char rx_buffer[BUF_SIZE];
+uint8_t rx_pos = 0;
+
 app_gap_cb_t dev_info[MAX_DEVICES]; // struktura przechowujaca informacje o wykrytych urzadzeniach
 
 bool scan_complete = false;
@@ -336,8 +341,15 @@ void spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         }
         // Otrzymanie danych SPP
         case ESP_SPP_DATA_IND_EVT: {
-            ESP_LOGI("SPP", "Odebrano %d bajtów: ", param->data_ind.len);
-            printf("%.*s", param->data_ind.len, param->data_ind.data);
+            // Zabezpieczenie przed przepełnieniem bufora
+            if (rx_pos + param->data_ind.len >= BUF_SIZE) {
+                ESP_LOGE("SPP", "Bufor przepełniony! Reset!");
+                esp_restart();
+            }
+
+            // Dopisanie nowych danych do bufora
+            memcpy(rx_buffer + rx_pos, param->data_ind.data, param->data_ind.len);
+            rx_pos += param->data_ind.len;
             break;
         }
         // Zamkniecie polaczenia SPP
@@ -403,7 +415,7 @@ bool bluetooth_connect(esp_bd_addr_t bda)
 {
     const char *pin[] = {"1234", "0000"};
 
-    int counter = 0;
+    uint8_t counter = 0;
     scan_complete = false;
     spp_scn = 0;
 
@@ -418,7 +430,7 @@ bool bluetooth_connect(esp_bd_addr_t bda)
 
     if(scan_complete && spp_scn > 0) {
         // Jesli kanal SPP zostal znaleziony, proba polaczenia
-        for (int i = 0; i < PINS_COUNT; i++) {
+        for (uint8_t i = 0; i < PINS_COUNT; i++) {
             esp_bt_gap_set_pin(ESP_BT_PIN_TYPE_FIXED, 4, (uint8_t*)pin[i]);
             esp_spp_connect(ESP_SPP_SEC_NONE, ESP_SPP_ROLE_MASTER, spp_scn, bda);
 
@@ -447,4 +459,23 @@ bool bluetooth_connect(esp_bd_addr_t bda)
 void spp_send(char *data)
 {
     esp_spp_write(spp_handle, strlen(data), (uint8_t *)data);
+}
+
+bool spp_receive(char *data)
+{
+    uint8_t counter = 0;
+    while(rx_buffer[rx_pos - 1] != '>' && (counter < 100)) {
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        counter++;
+    }
+
+    if(rx_buffer[rx_pos - 1] == '>') {
+        memcpy(data, rx_buffer, rx_pos);
+        rx_pos = 0;
+        return true;
+    }
+    else {
+        rx_pos = 0;
+        return false;
+    }
 }

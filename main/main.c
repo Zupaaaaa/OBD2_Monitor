@@ -5,6 +5,7 @@
 
 void app_main(void)
 {
+    connect_device();
     elm327_init();
 
     while(1) {

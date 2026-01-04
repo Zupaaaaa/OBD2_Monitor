@@ -62,6 +62,11 @@ bool try_connect(esp_bd_addr_t * mac)
     memset(dev_info, 0, sizeof(dev_info)); // wyczysc strukture przechowujaca informacje o urzadzeniach
     bluetooth_scan();
 
+    if(dev_info[0].dev_counter == 0) {
+        printf("Nie znaleziono zadnych urzadzen Bluetooth. Ponowne skanowanie...\n");
+        return false;
+    }
+
     printf("Wybierz urzadzenie:\n");
     for(device_number = 0; device_number < MAX_DEVICES; device_number++) {
         p_dev = &dev_info[device_number];
@@ -72,7 +77,6 @@ bool try_connect(esp_bd_addr_t * mac)
         
         bda2str(p_dev->bda, bda_str, sizeof(bda_str));
         printf("Urzadzenie %d, MAC %s, Nazwa %s \n", p_dev->dev_counter, bda_str, p_dev->bdname);
-        device_number++;
     }
     device_number = wczytajLiczbe();
 

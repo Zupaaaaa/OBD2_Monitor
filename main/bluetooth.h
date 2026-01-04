@@ -41,3 +41,4 @@ void bluetooth_init(void);
 void bluetooth_scan(void);
 bool bluetooth_connect(esp_bd_addr_t);
 void spp_send(char *data);
+bool spp_receive(char *data);
