@@ -36,8 +36,8 @@ typedef struct {
 
 extern app_gap_cb_t dev_info[MAX_DEVICES]; // struktura przechowujaca informacje o wykrytych urzadzeniach
 
+char *bda2str(esp_bd_addr_t bda, char *str, size_t size);
 void bluetooth_init(void);
 void bluetooth_scan(void);
-void bluetooth_service_discover(uint8_t);
 bool bluetooth_connect(esp_bd_addr_t);
 void spp_send(char *data);

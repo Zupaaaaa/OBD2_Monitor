@@ -27,11 +27,14 @@
 #define CHECK_CONN_DELAY_MS 50
 #define MAX_CONN_TIME_MS 2000
 
+#define PINS_COUNT 2
+
 app_gap_cb_t dev_info[MAX_DEVICES]; // struktura przechowujaca informacje o wykrytych urzadzeniach
 
 bool scan_complete = false;
 bool spp_connected = false;
 uint32_t spp_handle = 0;
+uint8_t spp_scn = 0;
 
 char *bda2str(esp_bd_addr_t bda, char *str, size_t size)
 {
@@ -276,7 +279,7 @@ void bluetooth_service_discover(uint8_t device_number)
 
     // Sprawdzenie poprawnosci numeru urzadzenia
     if(device_number == 0 || device_number > dev_counter) {
-        ESP_LOGE("BT", "Nieprawidlowy numer urzadzenia!");
+        ESP_LOGI("BT", "Nieprawidlowy numer urzadzenia!");
         return;
     }
 
@@ -307,6 +310,25 @@ void spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
             spp_connected = true;
             break;
         }
+        // Szukanie kanalu SPP
+        case ESP_SPP_DISCOVERY_COMP_EVT: {
+            scan_complete = true;
+            ESP_LOGI("SPP", "Wyszukiwanie zakonczone.");
+
+            if (param->disc_comp.status == ESP_SPP_SUCCESS) {
+                // Sprawdzamy, czy znaleziono jakiekolwiek kanały SPP
+                if (param->disc_comp.scn_num > 0) {
+                    // Znaleziono numer kanału. Zapisanie pierwszego dostepnego kanalu
+                    spp_scn = param->disc_comp.scn[0];
+                    ESP_LOGI("SPP", "Kanal SPP to: %d", spp_scn);
+                } else {
+                    ESP_LOGI("SPP", "Nie znaleziono kanalu SPP.");
+                }
+            } else {
+                ESP_LOGI("SPP", "Blad podczas szukania SPP.");
+            }
+            break;
+        }
         // Wyslanie danych SPP
         case ESP_SPP_WRITE_EVT: {
             ESP_LOGI("SPP", "Pomyslnie wysłano %d bajtów", param->write.len);
@@ -315,7 +337,7 @@ void spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         // Otrzymanie danych SPP
         case ESP_SPP_DATA_IND_EVT: {
             ESP_LOGI("SPP", "Odebrano %d bajtów: ", param->data_ind.len);
-            printf("%.*s\n", param->data_ind.len, param->data_ind.data);
+            printf("%.*s", param->data_ind.len, param->data_ind.data);
             break;
         }
         // Zamkniecie polaczenia SPP
@@ -379,24 +401,47 @@ void bluetooth_init(void)
 
 bool bluetooth_connect(esp_bd_addr_t bda)
 {
-        const char *pin[] = {"1234", "0000"};
-        for (int i = 0; i < 2; i++) {
-            esp_bt_gap_set_pin(ESP_BT_PIN_TYPE_FIXED, 4, (uint8_t*)pin[i]);
-            esp_spp_connect(ESP_SPP_SEC_NONE, ESP_SPP_ROLE_MASTER, 0, bda);
+    const char *pin[] = {"1234", "0000"};
 
-            int counter = 0;
+    int counter = 0;
+    scan_complete = false;
+    spp_scn = 0;
+
+    ESP_LOGI("SPP", "Wyszukiwanie kanalu SPP...");
+    esp_spp_start_discovery(bda);
+
+    // Oczekiwanie na zakonczenie wyszukiwania kanalu SPP
+    while (!spp_connected && (counter < MAX_CONN_TIME_MS / CHECK_CONN_DELAY_MS)) {
+        vTaskDelay(CHECK_CONN_DELAY_MS / portTICK_PERIOD_MS);
+        counter++;
+    }
+
+    if(scan_complete && spp_scn > 0) {
+        // Jesli kanal SPP zostal znaleziony, proba polaczenia
+        for (int i = 0; i < PINS_COUNT; i++) {
+            esp_bt_gap_set_pin(ESP_BT_PIN_TYPE_FIXED, 4, (uint8_t*)pin[i]);
+            esp_spp_connect(ESP_SPP_SEC_NONE, ESP_SPP_ROLE_MASTER, spp_scn, bda);
+
+            counter = 0;
             while (!spp_connected && (counter < MAX_CONN_TIME_MS / CHECK_CONN_DELAY_MS)) {
                 vTaskDelay(CHECK_CONN_DELAY_MS / portTICK_PERIOD_MS);
-                counter += 1;
+                counter++;
             }
 
             if(spp_connected) {
                 ESP_LOGI("BT", "Polaczono z uzyciem pinu: %s", pin[i]);
+                printf("Polaczono\n");
                 return true;
             }
         }
         ESP_LOGI("BT", "Zaden pin nie jest poprawny, polaczenie nie powiodlo sie");
+        printf("Nie udalo sie polaczyc\n");
         return false;
+    }
+    else {
+        ESP_LOGI("BT", "Nie udalo sie polaczyc z SPP.");
+        return false;
+    }
 }
 
 void spp_send(char *data)
