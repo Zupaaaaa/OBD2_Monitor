@@ -12,6 +12,7 @@
 #include "esp_log.h"
 
 #define WINDOW_SIZE_KM 200 // Rozmiar okna w km
+#define TANK_CAPACITY_LITERS 45.0f
 
 typedef struct {
     // --- PALIWO ---
@@ -195,4 +196,38 @@ void load_history_from_nvs() {
     }
 
     nvs_close(my_handle);
+}
+
+float calculate_fuel_in_liters(float percentage) {
+    // Zmienna globalna do "wygładzania" odczytu (średnia krocząca)
+    static float smoothed_fuel_liters = -1.0f; 
+
+    // Zamiana % na Litry
+    float current_liters = (percentage / 100.0f) * TANK_CAPACITY_LITERS;
+    
+    // Pierwszy odczyt - Zainicjuj zmienną.
+    if (smoothed_fuel_liters < 0.0f) {
+        smoothed_fuel_liters = current_liters;
+    } else {
+        // Średnia ważona: 98% starej wartości, 2% nowej.
+        smoothed_fuel_liters = (smoothed_fuel_liters * 0.98f) + (current_liters * 0.02f);
+    }
+
+    return smoothed_fuel_liters;
+}
+
+float get_estimated_range_km(float liters_in_tank, float avg_consumption) {
+    // Zabezpieczenie przed dzieleniem przez zero
+    if (avg_consumption < 0.1f) {
+        return 0.0f;
+    }
+
+    // Zabezpieczenie rezerwy 3 litry
+    float usable_liters = liters_in_tank - 3.0f;
+    if (usable_liters < 0) {
+        usable_liters = 0;
+    }
+
+    // Wzór: (Litry / Spalanie) * 100
+    return (usable_liters / avg_consumption) * 100.0f;
 }

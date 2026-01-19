@@ -13,3 +13,8 @@
 void elm327_init(void);
 uint16_t elm327_get_rpm(void);
 uint16_t elm327_get_speed(void);
+uint8_t elm327_get_coolant_temp(void);
+float elm327_get_maf(void);
+float elm327_get_current_fuel_per_hour(float);
+float elm327_get_current_fuel_per_100km(float fuel_per_hour, uint16_t speed);
+float elm327_get_fuel_level(void);

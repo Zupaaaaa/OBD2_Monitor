@@ -26,6 +26,8 @@
 #define CMD_ENGINE_RPM     "010C\r"
 #define CMD_VEHICLE_SPEED  "010D\r"
 #define CMD_COOLANT_TEMP   "0105\r"
+#define CMD_MAF            "0110\r"
+#define CMD_FUEL_LEVEL     "012F\r"
 
 char rx_data[BUF_SIZE];
 
@@ -172,7 +174,7 @@ uint8_t elm327_get_coolant_temp()
 
 float elm327_get_maf()
 {
-    spp_send("0110\r");
+    spp_send(CMD_MAF);
     elm327_read(rx_data);
 
     // Parsowanie odpowiedzi
@@ -198,4 +200,17 @@ float elm327_get_current_fuel_per_100km(float fuel_per_hour, uint16_t speed)
         // Obliczanie chwilowego zuzycia paliwa w L/100km
         return (float) ((fuel_per_hour / speed) * 100.0f);
     }
+}
+
+float elm327_get_fuel_level()
+{
+    spp_send(CMD_FUEL_LEVEL);
+    elm327_read(rx_data);
+
+    // Parsowanie odpowiedzi
+    unsigned int A = 0;
+    sscanf(rx_data, "412F%02X", &A);
+
+    // Obliczanie poziomu paliwa w %
+    return (float) ((A * 100) / 255.0f);
 }
