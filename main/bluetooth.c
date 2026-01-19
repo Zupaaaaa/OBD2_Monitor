@@ -465,7 +465,7 @@ bool spp_receive(char *data)
 {
     uint8_t counter = 0;
     while(rx_buffer[rx_pos - 1] != '>' && (counter < 100)) {
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(20 / portTICK_PERIOD_MS);
         counter++;
     }
 

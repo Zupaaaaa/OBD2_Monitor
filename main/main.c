@@ -2,6 +2,7 @@
 #include "freertos/task.h"
 #include "connect.h"
 #include "elm327.h"
+#include "averages.h"
 
 void app_main(void)
 {

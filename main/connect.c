@@ -58,6 +58,7 @@ bool try_connect(esp_bd_addr_t * mac)
     app_gap_cb_t *p_dev;
     int device_number;
     char bda_str[18];
+    uint8_t wybor;
 
     memset(dev_info, 0, sizeof(dev_info)); // wyczysc strukture przechowujaca informacje o urzadzeniach
     bluetooth_scan();
@@ -78,7 +79,11 @@ bool try_connect(esp_bd_addr_t * mac)
         bda2str(p_dev->bda, bda_str, sizeof(bda_str));
         printf("Urzadzenie %d, MAC %s, Nazwa %s \n", p_dev->dev_counter, bda_str, p_dev->bdname);
     }
-    device_number = wczytajLiczbe();
+    wybor = wczytajLiczbe();
+
+    if(wybor == 0 || wybor > device_number) {
+        return false;
+    }
 
     memcpy(mac, dev_info[device_number - 1].bda, sizeof(esp_bd_addr_t));
     return bluetooth_connect(*mac);

@@ -25,6 +25,7 @@
 #define CMD_TEST           "0100\r"
 #define CMD_ENGINE_RPM     "010C\r"
 #define CMD_VEHICLE_SPEED  "010D\r"
+#define CMD_COOLANT_TEMP   "0105\r"
 
 char rx_data[BUF_SIZE];
 
@@ -127,5 +128,74 @@ void elm327_init(void)
             ESP_LOGI("ELM327", "Inicjalizacja ELM327...");
             vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
+    }
+}
+
+uint16_t elm327_get_rpm()
+{
+    spp_send(CMD_ENGINE_RPM);
+    elm327_read(rx_data);
+
+    // Parsowanie odpowiedzi
+    unsigned int A = 0, B = 0;
+    sscanf(rx_data, "410C%02X%02X", &A, &B);
+
+    // Obliczanie obrotow silnika
+    return (uint16_t) (((A * 256) + B) / 4);
+}
+
+uint16_t elm327_get_speed()
+{
+    spp_send(CMD_VEHICLE_SPEED);
+    elm327_read(rx_data);
+
+    // Parsowanie odpowiedzi
+    unsigned int A = 0;
+    sscanf(rx_data, "410D%02X", &A);
+
+    // Zwrocenie predkosci pojazdu
+    return (uint16_t) A;
+}
+
+uint8_t elm327_get_coolant_temp()
+{
+    spp_send(CMD_COOLANT_TEMP);
+    elm327_read(rx_data);
+
+    // Parsowanie odpowiedzi
+    unsigned int A = 0;
+    sscanf(rx_data, "4105%02X", &A);
+
+    // Obliczanie temperatury cieczy chłodzącej
+    return (uint8_t) (A - 40);
+}
+
+float elm327_get_maf()
+{
+    spp_send("0110\r");
+    elm327_read(rx_data);
+
+    // Parsowanie odpowiedzi
+    unsigned int A = 0, B = 0;
+    sscanf(rx_data, "4110%02X%02X", &A, &B);
+
+    // Obliczanie przeplywu masowego powietrza
+    return (float) (((A * 256) + B) / 100.0f);
+}
+
+float elm327_get_current_fuel_per_hour(float maf)
+{
+    // Obliczanie chwilowego zuzycia paliwa w L/100km
+    return (float) ((maf * 3600) / (14.7f * 745.0f));
+}
+
+float elm327_get_current_fuel_per_100km(float fuel_per_hour, uint16_t speed)
+{
+    if(speed < 5) {
+        return 0.0f;
+    }
+    else {
+        // Obliczanie chwilowego zuzycia paliwa w L/100km
+        return (float) ((fuel_per_hour / speed) * 100.0f);
     }
 }

@@ -2,7 +2,7 @@
 *
 * Autor: Filip Kiek
 *
-* Biblioteka służy do komunikacji z ukladem ELM327
+* Biblioteka służy do obliczania średnich parametrów pojazdu
 *
 ****************************************************************************/
 
@@ -10,6 +10,6 @@
 
 #include <stdint.h>
 
-void elm327_init(void);
-uint16_t elm327_get_rpm(void);
-uint16_t elm327_get_speed(void);
+float get_average_fuel_200km();
+float get_average_speed_kmh_200km();
+void process_trip_data(float, uint16_t);
