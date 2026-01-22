@@ -64,10 +64,12 @@ bool try_connect(esp_bd_addr_t * mac)
     bluetooth_scan();
 
     if(dev_info[0].dev_counter == 0) {
+        printf("\033[2J\033[H"); // Wyczyść ekran i ustaw kursor w lewym górnym rogu
         printf("Nie znaleziono zadnych urzadzen Bluetooth. Ponowne skanowanie...\n");
         return false;
     }
 
+    printf("\033[2J\033[H"); // Wyczyść ekran i ustaw kursor w lewym górnym rogu
     printf("Wybierz urzadzenie:\n");
     for(device_number = 0; device_number < MAX_DEVICES; device_number++) {
         p_dev = &dev_info[device_number];

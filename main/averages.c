@@ -222,12 +222,6 @@ float get_estimated_range_km(float liters_in_tank, float avg_consumption) {
         return 0.0f;
     }
 
-    // Zabezpieczenie rezerwy 3 litry
-    float usable_liters = liters_in_tank - 3.0f;
-    if (usable_liters < 0) {
-        usable_liters = 0;
-    }
-
     // Wzór: (Litry / Spalanie) * 100
-    return (usable_liters / avg_consumption) * 100.0f;
+    return (liters_in_tank / avg_consumption) * 100.0f;
 }
