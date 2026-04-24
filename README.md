@@ -1,32 +1,42 @@
-# _Sample project_
+# ESP32 OBD-II Monitor
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+An ESP32-based project that connects to a vehicle's OBD-II port via a Bluetooth adapter (ELM327). It monitors real-time engine parameters and calculates trip statistics that are not natively provided by the engine control unit (ECU).
 
-This is the simplest buildable example. The example is used by command `idf.py create-project`
-that copies the project to user specified path and set it's name. For more information follow the [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project)
+This project was developed as part of the *Microcontroller Applications* course at **AGH University of Science and Technology** (Microelectronics in Technology and Medicine).
 
+## 🎯 Project Objective
+A primary goal of the project was to design an **easy and automatic connection system** with a wireless OBD-II adapter. Additionally, since standard OBD-II protocols do not provide direct readouts for fuel consumption (L/100km) or estimated range, the project includes mathematical models to calculate these values directly on the device using raw sensor data (Mass Air Flow, Vehicle Speed, Fuel Level).
 
+## 🛠 Specification
 
-## How to use example
-We encourage the users to use the example as a template for the new projects.
-A recommended way is to follow the instructions on a [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project).
+* **Microcontroller:** ESP32
+* **Hardware Interface:** V-Gate iCar II (ELM327-based OBD-II Bluetooth adapter)
+* **Language:** C
+* **Framework:** ESP-IDF
+* **RTOS:** FreeRTOS
+* **Communication:** Bluetooth Classic (SPP) & OBD-II
 
-## Example folder contents
+## 💡 Key Implementations
 
-The project **sample_project** contains one source file in C language [main.c](main/main.c). The file is located in folder [main](main).
+* **Easy and automatic connection system:** Designed for simplicity and "plug-and-play" operation. The ESP32 automatically scans for the saved adapter's MAC address and connects to it. If the known device is unavailable, it gracefully falls back to a discovery mode, allowing the user to easily select a new device.
+* **FreeRTOS Integration:** Developed using the native ESP-IDF framework, which uses FreeRTOS to maintain a stable Bluetooth connection in the background while the main application processes vehicle data.
+* **Rolling Average (Circular Buffer):** Implemented to track vehicle speed and fuel consumption over a sliding window of the last 200 kilometers.
+* **Numerical Integration:** Calculates traveled distance and consumed fuel based on time deltas and data readings.
 
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt`
-files that provide set of directives and instructions describing the project's source files and targets
-(executable, library, or both). 
+## 📊 Features
 
-Below is short explanation of remaining files in the project folder.
+* **Live Telemetry:** Engine RPM, Vehicle Speed, Coolant Temperature, MAF sensor data, Fuel Level.
+* **Calculated Parameters:**
+  * Instantaneous Fuel Consumption (L/h and L/100km).
+  * Long-term Average Fuel Consumption (last 200 km).
+  * Estimated Remaining Range (based on fuel level and average consumption).
 
-```
-├── CMakeLists.txt
-├── main
-│   ├── CMakeLists.txt
-│   └── main.c
-└── README.md                  This is the file you are currently reading
-```
-Additionally, the sample project contains Makefile and component.mk files, used for the legacy Make based build system. 
-They are not used or needed when building with CMake and idf.py.
+## 📂 System Flow
+
+1. **Boot:** Initializes system.
+2. **Connection:** Executes the automated Bluetooth connecting process with the ELM327 adapter.
+3. **Telemetry Loop:** Continuously requests standard PIDs, parses HEX responses, and calculates the rest of parameters.
+4. **Trip Statistics:** Processes the incoming data to update the current trip averages.
+
+---
+*Developed by Filip Kiek* | *AGH UST WEAIiIB MTM*
